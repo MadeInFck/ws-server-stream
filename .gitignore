@@ -1,0 +1,7 @@
+.idea/*
+__pycache__/*
+server.log
+.env
+models/*
+.DS_Store
+
