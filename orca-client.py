@@ -31,7 +31,7 @@ port = os.getenv("WS_PORT")
 ip = os.getenv("WS_IP")
 access_key = os.getenv("PV_ACCESS_KEY")
 
-async def handle_messages(websocket):
+async def handle_messages(websocket, loop):
     """
     Continuously listens for messages received from the server and prints them immediately.
     """
@@ -49,15 +49,16 @@ async def handle_messages(websocket):
             #print(f"\nText received: {data.get('text')}")
             text = data.get("text")
             message_translated = agent.translate(text)
-            #print("Message translated:", message_translated, " depuis ", text)
+            print("Message translated:", message_translated, " depuis ", text)
             pcm, alignments = orca.synthesize(text=message_translated)
             # print("PCM:", pcm, "ALIGN:", alignments)
             #speaker.write(pcm)
             speaker.flush(pcm)
             # Reprint the prompt to ensure the user can continue inputting
             # print("Enter your message: ", end="", flush=True)
-            speaker.stop()
             recorder.start()
+            speaker.stop()
+
 
 
 async def send_status(websocket, status):
@@ -103,7 +104,7 @@ def capture_audio_thread(websocket, loop):
                 transcript += partial_transcript
                 if is_endpoint:
                     final_transcript = cheetah.flush()
-                    print(transcript + final_transcript)
+                    #print(transcript + final_transcript)
                     asyncio.run_coroutine_threadsafe(send_status(websocket, "active"), loop)
                     asyncio.run_coroutine_threadsafe(send_text(websocket, transcript + final_transcript), loop)
                     asyncio.run_coroutine_threadsafe(send_inactive_delay(websocket), loop)
@@ -152,7 +153,7 @@ async def start_client():
         thread = threading.Thread(target=capture_audio_thread, args=(websocket, loop), daemon=True)
         thread.start()
         # Remain in the message receiving loop
-        await handle_messages(websocket)
+        await handle_messages(websocket, loop)
 
 def print_decorator(n):
     """ Print fill-in # pretty cli """
