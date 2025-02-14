@@ -190,7 +190,7 @@ def select_device_audio_speak():
         return 0
 
 
-if __name__ == "__main__":
+def run():
     """ Init of agent and Ollama"""
     # Select LLM model to run for translation
     agent = TranslateAgent()
@@ -252,3 +252,6 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"Error while shutting down : {e}")
 
+
+if __name__ == "__main__":
+    run()

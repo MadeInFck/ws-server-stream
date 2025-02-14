@@ -4,4 +4,6 @@ server.log
 .env
 models/*
 .DS_Store
-
+dist/*
+build/*
+main.spec
