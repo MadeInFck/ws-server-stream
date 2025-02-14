@@ -14,3 +14,11 @@
   - Model for Cheetah
   - Device to listen from a list of devices available on your computer
   - Device to speak from a list of devices available on your computer
+
+
+
+- ### How does that work?
+  - Basic server: as explicitly said in the name, that's the server
+  - Basic client: simple test of ws connection. Used as a prototype to check written messages exchange.
+  - Orca client: this client uses speech to text to recognize what is said by the user and once done, sends the message. On the other hand, when the client receives a message, it is spoken by Cheetah module in the language configured by the user.
+  - Translate Agent: used to detect language of the message received by the client, translates it into the language selected by the user. 
