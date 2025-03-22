@@ -10,6 +10,11 @@ import pvrecorder
 from translate_agent import TranslateAgent
 from dotenv import load_dotenv
 import os
+import jwt
+import ssl
+import uuid
+
+user_id = str(uuid.uuid4())
 
 language_model_mapping = {
     "English": "./models/cheetah_params.pv",
@@ -29,6 +34,11 @@ load_dotenv()
 port = os.getenv("WS_PORT")
 ip = os.getenv("WS_IP")
 access_key = os.getenv("PV_ACCESS_KEY")
+secret = os.getenv("SECRET_KEY")
+
+def generate_token(user_id):
+    payload = {"user_id": user_id}
+    return jwt.encode(payload, secret, algorithm="HS256")
 
 async def handle_messages(websocket, loop, recorder, speaker, agent, orca):
     async for message in websocket:
@@ -96,10 +106,16 @@ def capture_audio_thread(websocket, loop, recorder, cheetah):
         recorder.stop()
 
 async def start_client(recorder, speaker, agent, orca, cheetah):
-    websocket_url = f"ws://{ip}:{port}"
+    websocket_url = f"wss://{ip}:{port}"
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
 
-    async with websockets.connect(websocket_url) as websocket:
-        print(f"WebSocket connection established at ws://{ip}:{port}.")
+    async with websockets.connect(websocket_url, ssl=ssl_context) as websocket:
+        print(f"WebSocket connection established at wss://{ip}:{port}.")
+
+        token = generate_token(user_id)
+        await send_authentication(websocket, token)
 
         loop = asyncio.get_running_loop()
         thread = threading.Thread(target=capture_audio_thread, args=(websocket, loop, recorder, cheetah), daemon=True)

@@ -73,6 +73,7 @@ class TranslateAgent:
         """ Select language all received texts should be translated to"""
         languages = ["English", "French", "German", "Italian", "Portuguese", "Spanish"]
         print_decorator(50)
+        print("Select a language for this client")
         for idx, model in enumerate(languages):
             print(f"{idx + 1}. {model}")
 
