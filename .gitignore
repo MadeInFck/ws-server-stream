@@ -7,3 +7,4 @@ models/*
 dist/*
 build/*
 main.spec
+cert/*

@@ -202,7 +202,7 @@ def run():
     agent.select_model_speak()
     """ Init of PicoVoice services """
 
-    # Initialize PV Recorder
+    # Initialize PV Recorder to listen to speecch
     device_listen = select_device_audio_capture()
     recorder = pvrecorder.PvRecorder(frame_length=512, device_index=device_listen, buffered_frames_count=50)
     device_speak = select_device_audio_speak()
@@ -210,15 +210,15 @@ def run():
     print(f"→ PV Recorder v{recorder.version} started.")
 
 
-    # Initialize PV Cheetah
+    # Initialize PV Cheetah for speech recognition
     cheetah = pvcheetah.create(access_key=access_key, model_path=language_model_mapping[agent._language_listen], endpoint_duration_sec=2, enable_automatic_punctuation=True)
     print(f"→ PV Cheetah v{cheetah.version} started with language {agent._language_listen}.")
 
-    # Initialize PV Orca
+    # Initialize PV Orca for text to speech
     orca = pvorca.create(access_key=access_key, model_path=speak_model_mapping[agent._model_speak])
     print(f"→ PV Orca v{orca.version} started with {agent._model_speak} voice.")
 
-    # Initialize PV Speaker
+    # Initialize PV Speaker to synthesize voice
     speaker = pvspeaker.PvSpeaker(
         sample_rate=22050,
         bits_per_sample=16,

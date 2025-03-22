@@ -3,6 +3,30 @@ import asyncio
 import websockets
 import json
 import threading
+import ssl
+import jwt
+import os
+from dotenv import load_dotenv
+import uuid
+
+# Create UUID for this client
+user_id = str(uuid.uuid4())
+
+# Get env variables
+load_dotenv()
+
+secret = os.getenv("SECRET_KEY")
+
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
+
+# Generate JWT token
+def generate_token(user_id):
+    """Génère un token JWT avec un payload simple."""
+    payload = {"user_id": user_id}
+    return jwt.encode(payload, secret, algorithm="HS256")
+
 
 async def handle_messages(websocket):
     """
@@ -38,6 +62,8 @@ async def send_text(websocket, text):
         "text": text,
         "from": str(websocket.remote_address)
     })
+    print("Message envoyé")
+    print(message)
     await websocket.send(message)
 
 
@@ -47,6 +73,11 @@ async def send_inactive_delay(websocket):
     """
     await asyncio.sleep(0.1)
     await send_status(websocket, "inactive")
+
+async def send_authentication(websocket, token):
+    """Envoie le message d'authentification avec le token JWT."""
+    auth_message = json.dumps({"type": "auth", "token": token})
+    await websocket.send(auth_message)
 
 
 def input_thread(websocket, loop):
@@ -74,16 +105,24 @@ async def start_client():
     Se connecte au serveur et démarre les tâches d'affichage des messages reçus
     et de saisie utilisateur via un thread.
     """
-    websocket_url = "ws://10.51.0.185:8765"  # Vérifiez que l'URL et le port sont corrects
-    async with websockets.connect(websocket_url) as websocket:
+    websocket_url = "wss://172.20.10.2:8765"  # Vérifiez que l'URL et le port sont corrects
+    async with websockets.connect(websocket_url, ssl=ssl_context) as websocket:
         print("WebSocket connection established.")
+
+        # Générer et envoyer le token JWT (exemple avec user_id=1)
+        token = generate_token(user_id)
+        await send_authentication(websocket, token)
+
         # Obtenir la boucle asynchrone en cours
         loop = asyncio.get_running_loop()
         # Démarrer le thread pour la saisie utilisateur
         thread = threading.Thread(target=input_thread, args=(websocket, loop), daemon=True)
         thread.start()
-        # Rester dans la réception des messages
-        await handle_messages(websocket)
+
+        try:
+            await handle_messages(websocket)
+        except websockets.ConnectionClosed as e:
+            print(f"Connection closed: {e}")
 
 
 if __name__ == "__main__":

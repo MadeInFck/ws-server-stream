@@ -3,6 +3,11 @@ import asyncio
 import websockets
 import json
 import threading
+import ssl
+
+ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE
 
 async def handle_messages(websocket):
     """
@@ -38,6 +43,8 @@ async def send_text(websocket, text):
         "text": text,
         "from": str(websocket.remote_address)
     })
+    print("Message envoyé")
+    print(message)
     await websocket.send(message)
 
 
@@ -74,8 +81,8 @@ async def start_client():
     Se connecte au serveur et démarre les tâches d'affichage des messages reçus
     et de saisie utilisateur via un thread.
     """
-    websocket_url = "ws://10.51.0.185:8765"  # Vérifiez que l'URL et le port sont corrects
-    async with websockets.connect(websocket_url) as websocket:
+    websocket_url = "wss://172.20.10.2:8765"  # Vérifiez que l'URL et le port sont corrects
+    async with websockets.connect(websocket_url, ssl=ssl_context) as websocket:
         print("WebSocket connection established.")
         # Obtenir la boucle asynchrone en cours
         loop = asyncio.get_running_loop()
