@@ -4,19 +4,19 @@
   - Orca and PvSpeaker to synthesize voice from speech. English, French, Spanish and German models (Korean and Japanese not implemented as speech recognition is not available yet) available at this time, male or female voice
   - Cheetah to recognize speech to text in English, French, Spanish, German, Italian and Portuguese (Korean and Japanese not implemented yet)
 - ### Uses Ollama as the translator agent
-
+  - Your models are all selectionable from displayed list in the app
 - ### Implementation to come
   - PicoLLM (work in progress) to infer using small open weight models
   - Real time streaming
-
-- ### CLI parameters selection:
+- ### Prompt parameters selection:
   - Model for ollama, from the list of models installed locally
   - Model gender for speech (male, female)
   - Model for Cheetah speech recognition (en, fr, pt, sp, ge, it)
   - Device to listen from a list of devices available on your computer
   - Device to speak from a list of devices available on your computer
-
-
+- ### Websocket connection
+  - In dev mode, initially used ws://ip:port for local ws connection. These parts have been commented for those who would like to test the snippets of this repo
+  - Prod mode, just set env variable as WS_URL once or if you have a ws server deployed somewhere
 - ### Some explanations about the files of the repo
   - Basic server: as explicitly said in the name, that's the server
   - Basic client: simple test of ws connection. Used as a prototype to check written messages exchange.
