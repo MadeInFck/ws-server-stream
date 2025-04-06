@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+
 import asyncio
 import websockets
 import logging
@@ -21,7 +22,7 @@ logging.basicConfig(
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 ssl_context.load_cert_chain(certfile='./cert/localhost.crt', keyfile='./cert/localhost.key')
 
-# Get env variables
+# Get env variables for dev mode
 load_dotenv()
 port = os.getenv("WS_PORT")
 ip = os.getenv("WS_IP")
@@ -30,7 +31,7 @@ secret = os.getenv("SECRET_KEY")
 clients = {}
 
 def verify_token(token):
-    """Vérifie la validité du token JWT et retourne le payload si valide."""
+    """Verifies the validity of the JWT token and returns the payload if valid."""
     try:
         payload = jwt.decode(token, secret, algorithms=["HS256"])
         return payload
@@ -41,22 +42,25 @@ async def handler(websocket):
     logging.info(f"Client connected: {websocket.remote_address}")
     print(f"Client connected: {websocket.remote_address}")
 
-    # Attendre le message d'authentification
+    # Wait for the authentication message
     try:
         auth_message = await websocket.recv()
         data = json.loads(auth_message)
         if data.get("type") != "auth" or "token" not in data:
-            await websocket.close(1008, "Message d'authentification invalide")
+            # Close the connection if the authentication message is invalid
+            await websocket.close(1008, "Invalid authentication message")
             return
         token = data["token"]
         payload = verify_token(token)
         if not payload:
-            await websocket.close(1008, "Token invalide")
+            # Close the connection if the token is invalid
+            await websocket.close(1008, "Invalid token")
             return
-        logging.info(f"Client authentifié: {payload}")
-        print(f"Client authentifié: {payload}")
+        # Log and print the authenticated client
+        logging.info(f"Authenticated client: {payload}")
+        print(f"Authenticated client: {payload}")
     except (json.JSONDecodeError, websockets.ConnectionClosed):
-        await websocket.close(1008, "Erreur d'authentification")
+        await websocket.close(1008, "Authentication error")
         return
 
 

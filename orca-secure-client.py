@@ -16,7 +16,7 @@ import uuid
 
 user_id = str(uuid.uuid4())
 
-language_model_mapping = {
+recon_model_mapping = {
     "English": "./models/cheetah_params.pv",
     "French": "./models/cheetah_params_fr.pv",
     "German": "./models/cheetah_params_de.pv",
@@ -26,15 +26,30 @@ language_model_mapping = {
 }
 
 speak_model_mapping = {
-    "Male": "./models/orca_params_male.pv",
-    "Female": "./models/orca_params_female.pv"
+    "Male French": "./models/orca_params_fr_male.pv",
+    "Female French": "./models/orca_params_fr_female.pv",
+    "Male English": "./models/orca_params_en_male.pv",
+    "Female English": "./models/orca_params_en_female.pv",
+    "Male German": "./models/orca_params_de_male.pv",
+    "Female German": "./models/orca_params_de_female.pv",
+    "Male Italian": "./models/orca_params_it_male.pv",
+    "Female Italian": "./models/orca_params_it_female.pv",
+    "Male Spanish": "./models/orca_params_es_male.pv",
+    "Female Spanish": "./models/orca_params_es_female.pv",
+    "Male Portuguese": "./models/orca_params_pt_male.pv",
+    "Female Portuguese": "./models/orca_params_pt_female.pv",
 }
 
 load_dotenv()
-port = os.getenv("WS_PORT")
-ip = os.getenv("WS_IP")
+port = os.getenv("WS_PORT") # for dev mode
+ip = os.getenv("WS_IP") # for dev mode
 access_key = os.getenv("PV_ACCESS_KEY")
 secret = os.getenv("SECRET_KEY")
+url = os.getenv("WS_URL") # for production once deployed at url
+
+# Set threading event to sequence recorder role
+recorder_control = threading.Event()
+recorder_control.set()  # Recorder is initially active
 
 def generate_token(user_id):
     payload = {"user_id": user_id}
@@ -43,22 +58,30 @@ def generate_token(user_id):
 async def handle_messages(websocket, loop, recorder, speaker, agent, orca):
     async for message in websocket:
         try:
-            if recorder.is_recording:
-                recorder.stop()
-            speaker.start()
+
             data = json.loads(message)
+
+            if data.get("type") == "speech":
+                recorder_control.clear()
+                speaker.start()
+                text = data.get("text")
+                message_translated = agent.translate(text)
+                print("Message translated:", message_translated, " depuis ", text)
+                pcm, alignments = orca.synthesize(text=message_translated)
+                print("After synthesize")
+                speaker.flush(pcm)
+                print("Afer flush")
+                speaker.stop()
+                print("After stop")
+                recorder_control.set()
+                print("After control set")
+
         except json.JSONDecodeError:
             print("Received message is not a valid JSON.")
-            continue
-
-        if data.get("type") == "speech":
-            text = data.get("text")
-            message_translated = agent.translate(text)
-            print("Message translated:", message_translated, " depuis ", text)
-            pcm, alignments = orca.synthesize(text=message_translated)
-            speaker.flush(pcm)
-            recorder.start()
-            speaker.stop()
+        except Exception as e:
+            print(f"Erreur dans handle_messages : {e}")
+            recorder_control.set()  # Réactiver l'enregistrement même en cas d'erreur
+            print("Recorder control set après erreur")
 
 async def send_status(websocket, status):
     message = json.dumps({"type": "status", "status": status, "from": str(websocket.remote_address)})
@@ -87,6 +110,9 @@ def capture_audio_thread(websocket, loop, recorder, cheetah):
 
         transcript = ""
         while True:
+            print("Recorder thread est en écoute: ", recorder_control.is_set())
+            # Wait for event to be defined
+            recorder_control.wait()
             partial_transcript, is_endpoint = cheetah.process(recorder.read())
             transcript += partial_transcript
             if is_endpoint:
@@ -96,6 +122,7 @@ def capture_audio_thread(websocket, loop, recorder, cheetah):
                 asyncio.run_coroutine_threadsafe(send_text(websocket, transcript + final_transcript), loop)
                 asyncio.run_coroutine_threadsafe(send_inactive_delay(websocket), loop)
                 transcript = ""
+                recorder_control.set()
 
     except Exception as error:
         print("Error while capturing audio : ", error)
@@ -106,7 +133,7 @@ def capture_audio_thread(websocket, loop, recorder, cheetah):
         recorder.stop()
 
 async def start_client(recorder, speaker, agent, orca, cheetah):
-    websocket_url = f"wss://{ip}:{port}"
+    websocket_url = "wss://" + url     # Dev mode: f"wss://{ip}:{port}"
     ssl_context = ssl.create_default_context()
     ssl_context.check_hostname = False
     ssl_context.verify_mode = ssl.CERT_NONE
@@ -118,6 +145,7 @@ async def start_client(recorder, speaker, agent, orca, cheetah):
         await send_authentication(websocket, token)
 
         loop = asyncio.get_running_loop()
+        recorder_control.set()
         thread = threading.Thread(target=capture_audio_thread, args=(websocket, loop, recorder, cheetah), daemon=True)
         thread.start()
         await handle_messages(websocket, loop, recorder, speaker, agent, orca)
@@ -159,18 +187,18 @@ def run():
     agent = TranslateAgent()
     agent.choose_model()
     agent.select_language()
-    agent.select_model_speak()
+    agent.select_gender_speak()
 
     device_listen = select_device_audio_capture()
     recorder = pvrecorder.PvRecorder(frame_length=512, device_index=device_listen, buffered_frames_count=50)
     device_speak = select_device_audio_speak()
     print(f"→ PV Recorder v{recorder.version} started.")
 
-    cheetah = pvcheetah.create(access_key=access_key, model_path=language_model_mapping[agent._language_listen], endpoint_duration_sec=2, enable_automatic_punctuation=True)
-    print(f"→ PV Cheetah v{cheetah.version} started with language {agent._language_listen}.")
+    cheetah = pvcheetah.create(access_key=access_key, model_path=recon_model_mapping[agent._language], endpoint_duration_sec=2, enable_automatic_punctuation=True)
+    print(f"→ PV Cheetah v{cheetah.version} started with language {agent._language}.")
 
-    orca = pvorca.create(access_key=access_key, model_path=speak_model_mapping[agent._model_speak])
-    print(f"→ PV Orca v{orca.version} started with {agent._model_speak} voice.")
+    orca = pvorca.create(access_key=access_key, model_path=speak_model_mapping[f"{agent._gender_speak} {agent._language}"])
+    print(f"→ PV Orca v{orca.version} started with {agent._gender_speak} voice.")
 
     speaker = pvspeaker.PvSpeaker(
         sample_rate=22050,

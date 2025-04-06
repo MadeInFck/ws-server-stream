@@ -4,6 +4,7 @@ import websockets
 import logging
 import os
 from dotenv import load_dotenv
+import socket
 
 # Configure logging to write in "server.log" in append mode
 logging.basicConfig(
@@ -56,11 +57,25 @@ async def handler(websocket):
 
 async def main():
 
-
-    async with websockets.serve(handler, ip, port):
-        print(f"Server started at ws://{ip}:{port}")
+    async with websockets.serve(handler, "ws://live-translator.madeinfck.com"):
+        print(f"Server started at ws://live-translator.madeinfck.com")    #{ip}:{port}")
         await asyncio.Future()  # Keeps the server running indefinitely
 
+def get_host_ipv4():
+    try:
+        # Create a UDP socket to get the local IP address
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        # Connect to an external service (does not require a real connection)
+        s.connect(("8.8.8.8", 80))
+        # Get the local IP address
+        local_ip = s.getsockname()[0]
+        s.close()
+        return local_ip
+    except Exception as e:
+        return str(e)
 
 if __name__ == "__main__":
+    ip_address = get_host_ipv4()
+    print(f"The host's IPv4 address is: {ip_address}")
+
     asyncio.run(main())

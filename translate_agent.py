@@ -1,20 +1,19 @@
 from locale import normalize
-
 import ollama
 import unicodedata
 
 
 def print_decorator(n):
-    """ Print fill-in # pretty cli """
+    """ Print fill-in # for a pretty CLI """
     print("=" * n)
 
 
 class TranslateAgent:
     def __init__(self):
         self._detected_language = ""
-        self._language_listen = ""
+        self._language = ""
         self._model = ""
-        self._model_speak = ""
+        self._gender_speak = ""
 
 
     def __list_model(self):
@@ -31,6 +30,7 @@ class TranslateAgent:
         models = self.__list_model()
         if not models:
             print("No model locally available.")
+            ## Exit the app if no models are available
             return
 
         print("Models locally available:")
@@ -48,15 +48,16 @@ class TranslateAgent:
     def translate(self, prompt):
         """Translate the given prompt using the chosen model."""
        # self.detected_language = self.__detect_language(prompt)
-        messageToTranslate = f"Translate following text to {self._language_listen} : {prompt}. Only strict translation of the prompt is required, don't add anything more."
+        messageToTranslate = f"Translate following text to {self._language} : {prompt}.Output needs to be the translation only."
+        print(messageToTranslate)
         res = ollama.generate(prompt=messageToTranslate, model=self._model, stream=False)
         #print("Response : ", res)
         return self.normalize_text(res['response'])
 
     def normalize_text(self, text):
         # Normalize the text by decomposing accented characters
-        normalized_text = unicodedata.normalize('NFD', text)
         # Filter out the accent marks
+        normalized_text = unicodedata.normalize('NFD', text)
         final_text = ''.join(
             c for c in normalized_text
             if unicodedata.category(c) != 'Mn'
@@ -66,38 +67,38 @@ class TranslateAgent:
     def __detect_language(self, text):
         """Detect the language of the given text."""
         res = ollama.generate(prompt=f"Detect language of the following text : {text}, return only the language, nothing more", model=self._model, stream=False)
-        #print("Language détected : ", res['response'])
+        #print("Language detected : ", res['response'])
         self._detected_language = res['response']
 
     def select_language(self):
-        """ Select language all received texts should be translated to"""
-        languages = ["English", "French", "German", "Italian", "Portuguese", "Spanish"]
+        """ Select the language all received texts should be translated to """
+        languages = ["English", "French", "Spanish", "German", "Italian", "Portuguese"]
         print_decorator(50)
-        print("Select a language for this client")
+        print("Select a language for this client to listen and speak")
         for idx, model in enumerate(languages):
             print(f"{idx + 1}. {model}")
 
         choice = int(input("Select a language: ")) - 1
         print_decorator(50)
         if 0 <= choice < len(languages):
-            self._language_listen = languages[choice]
+            self._language = languages[choice]
         else:
             print("Invalid selection. First model in list will be used by default.")
-            self._language_listen = languages[0]
+            self._language = languages[0]
 
-    def select_model_speak(self):
-        """ Select model to speak"""
+    def select_gender_speak(self):
+        """ Select the model to speak """
         models = ["Male", "Female"]
         for idx, model in enumerate(models):
             print(f"{idx + 1}. {model}")
 
-        choice = int(input("Select a model: ")) - 1
+        choice = int(input("Select a model gender for speech: ")) - 1
         print_decorator(50)
         if 0 <= choice < len(models):
-            self._model_speak = models[choice]
+            self._gender_speak = models[choice]
         else:
             print("Invalid selection. First model in list will be used by default.")
-            self._model_speak = models[0]
+            self._gender_speak = models[0]
 
 if __name__ == "__main__":
     agent = TranslateAgent()

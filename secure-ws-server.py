@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
+## Websocket server SSL only to secure connection
 import asyncio
 import websockets
 import logging
 import os
 import ssl
 from dotenv import load_dotenv
+
 
 # Configure logging to write in "server.log" in append mode
 logging.basicConfig(
@@ -15,7 +17,7 @@ logging.basicConfig(
 )
 
 # Create SSL context, .crt and .key files are needed
-# Self signed certificates generated in development mode, use signing authority in production like Letsecrypt
+# Self-signed certificates generated in development mode, use a signing authority in production like Let's Encrypt
 ssl_context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
 ssl_context.load_cert_chain(certfile='./cert/localhost.crt', keyfile='./cert/localhost.key')
 

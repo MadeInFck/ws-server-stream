@@ -8,3 +8,4 @@ dist/*
 build/*
 main.spec
 cert/*
+.venv/*

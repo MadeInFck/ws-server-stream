@@ -1,1 +1,1 @@
-# Separate voice services from orca-client in dedicated current file
+# Separate voice services from orca-client in the current dedicated file
